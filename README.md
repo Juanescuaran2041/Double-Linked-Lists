@@ -38,21 +38,6 @@ tests/test_doubly_linked_list.py
 run.py
 ```
 
-## Your TODO list
-
-Implement in `app/data_structures/doubly_linked_list.py`:
-
-- [ ] `append`
-- [ ] `prepend`
-- [ ] `insert_after`
-- [ ] `insert_before`
-- [ ] `insert_sorted`
-- [ ] `remove`
-- [ ] `clear`
-- [ ] `find`
-- [ ] `__iter__`
-- [ ] `__reversed__`
-
 ## Run
 
 ```bash
