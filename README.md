@@ -15,6 +15,7 @@ and `AttackTimeline` is the list (`first_event`, `last_event`, `size`).
 | Walk **forwards** from the phishing email to measure the impact | `next_event` / `__iter__` |
 | New evidence must land in the middle of the timeline | `add_event` → `insert_event_before` |
 | A false positive must be discarded | `remove_event` in O(1) |
+| Host clocks are skewed, the analyst reorders manually | `move_event_before` = `remove_event` + `insert_event_before` |
 | The analyst keeps a cursor on the event being analysed | O(1) step in both directions |
 
 ## Project structure
@@ -54,6 +55,8 @@ python run.py        # http://127.0.0.1:5000
 | `insert_event_before` | Add an event with a time between two existing events |
 | `prepend_event` | Add an event older than all the others |
 | `remove_event` | "Remove event from timeline" button |
+| `move_event_before` | Drag a card and drop it between two others, "Move earlier" button or Shift + ← |
+| `move_event_to_end` | Drag a card after the last one, or "Move later" on the second-to-last |
 | `clear` | "Clear timeline" button |
 | `find_event` | Click a node or a `previous_event` / `next_event` box |
 | `__iter__` | "for event in timeline" row under the timeline |

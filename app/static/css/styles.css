@@ -62,7 +62,7 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
 
-.container { max-width: 1280px; margin: 0 auto; padding: 24px 32px 48px; display: grid; gap: 20px; }
+.container { max-width: 1280px; margin: 0 auto; padding: 24px 32px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -105,9 +105,9 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 
 /* ---------- timeline ---------- */
 .timeline {
+  position: relative;
   display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto; padding: 24px 4px 16px;
-  scroll-behavior: smooth;
+  overflow-x: auto; padding: 28px 4px 20px;
 }
 .timeline::-webkit-scrollbar { height: 8px; }
 .timeline::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
@@ -119,13 +119,55 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 }
 
 .link {
-  align-self: center; flex-shrink: 0; width: 64px;
+  position: relative; align-self: center; flex-shrink: 0; width: 78px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   font-family: var(--mono); font-size: 10px; color: var(--muted);
+  transition: transform .2s ease;
 }
-.link .arrow { font-size: 18px; color: var(--accent); line-height: 1; }
-.link.back .arrow { color: var(--back); }
-.link.forward .arrow { color: var(--forward); }
+.link svg { width: 56px; height: 30px; overflow: visible; }
+.link .lbl { white-space: nowrap; }
+.link path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.link path.fwd { stroke: var(--accent); }
+.link path.bwd { stroke: var(--accent-2); }
+.link path.broken { stroke: var(--danger); stroke-dasharray: .08 .06; }
+.link.back path { stroke: var(--back); }
+.link.forward path { stroke: var(--forward); }
+
+.link.rewired path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw-link .6s ease-out .25s forwards; }
+.link.rewired path.bwd { animation-delay: .55s; }
+.link.rewired .lbl { color: var(--accent); }
+.link.rewired::after {
+  content: ""; position: absolute; inset: -6px 2px; border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(34,211,238,.45);
+  opacity: 0; animation: link-glow 1.6s ease-out .2s;
+}
+@keyframes draw-link { to { stroke-dashoffset: 0; } }
+@keyframes link-glow { 20% { opacity: 1; } 100% { opacity: 0; } }
+
+.link.drop-target { transform: scale(1.2); }
+.link.drop-target::before {
+  content: ""; position: absolute; top: -70px; bottom: -70px; left: 50%;
+  width: 3px; margin-left: -1.5px; border-radius: 3px;
+  background: var(--accent); box-shadow: 0 0 14px var(--accent);
+}
+.link.drop-target .lbl { color: var(--accent); }
+
+.timeline.drag-active .node:not(.dragging) { cursor: copy; }
+.node.dragging { opacity: .3; transform: scale(.96); }
+.node.entering { animation: node-in .45s ease-out; }
+.node.just-moved { animation: node-pulse 1.2s ease-out; }
+@keyframes node-in { from { opacity: 0; transform: translateY(14px) scale(.95); } }
+@keyframes node-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34,211,238,.7); }
+  100% { box-shadow: 0 0 0 16px rgba(34,211,238,0); }
+}
+.node .grip { cursor: grab; color: var(--muted); margin-right: 6px; letter-spacing: -2px; }
+.node .ooo {
+  display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 600;
+  color: var(--back); background: rgba(245,158,11,.12); padding: 2px 6px; border-radius: 6px;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; border-color: var(--border); color: var(--muted); }
+.move-buttons { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 
 .node {
   position: relative; flex-shrink: 0; width: 210px;
@@ -172,7 +214,7 @@ code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-
 .traversal .row.backward .chip { border-color: rgba(245,158,11,.4); }
 
 /* ---------- columns ---------- */
-.columns { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+.columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } .topbar, .container { padding-left: 16px; padding-right: 16px; } }
 
 /* ---------- detail ---------- */

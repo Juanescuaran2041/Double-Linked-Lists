@@ -29,6 +29,7 @@ class ApiClient {
   jump(id) { return this.request("POST", `/api/cursor/jump/${encodeURIComponent(id)}`); }
   addEvent(payload) { return this.request("POST", "/api/events", payload); }
   deleteEvent(id) { return this.request("DELETE", `/api/events/${encodeURIComponent(id)}`); }
+  moveEvent(id, beforeId) { return this.request("POST", `/api/events/${encodeURIComponent(id)}/move`, { before_id: beforeId }); }
   traceBackward() { return this.request("GET", "/api/trace/backward"); }
   traceForward() { return this.request("GET", "/api/trace/forward"); }
   clear() { return this.request("POST", "/api/clear"); }
@@ -74,56 +75,189 @@ class TraversalView {
   }
 }
 
+/*
+ * Draws the chain from the real pointers (next_id / prev_id), so a broken
+ * link would show up in red. Supports drag & drop to relink a node, and
+ * animates the change: cards slide to their new place (FLIP) and every
+ * link that did not exist before is redrawn.
+ */
 class TimelineView {
-  constructor(element, onSelect) {
+  constructor(element, handlers) {
     this.el = element;
-    this.onSelect = onSelect;
-    this.trace = null; // { direction, path: [...ids], patientZero }
+    this.handlers = handlers; // { onSelect, onMove }
+    this.trace = null;        // { direction, path: [...ids], patientZero }
+    this.events = [];
+    this.previousLinks = null;
+    this.highlightId = null;
+    this.dragId = null;
+    this.dropBeforeId = undefined;
+    this.bindDragAndDrop();
   }
 
   setTrace(trace) { this.trace = trace; }
 
   render(snapshot) {
+    const oldPositions = this.nodePositions();
     const { events, cursor } = snapshot;
+    this.events = events;
+
     if (!events.length) {
       this.el.innerHTML = `<div class="empty">The list is empty (first_event = last_event = None).<br>Add the first piece of evidence with the form below.</div>`;
+      this.previousLinks = new Set();
       return;
     }
 
     const traced = new Set(this.trace ? this.trace.path : []);
-    const linkClass = this.trace ? this.trace.direction : "";
-    const parts = [`<div class="null-ref">None ← first_event</div>`, this.link("")];
+    const parts = [`<div class="null-ref">None</div>`, this.link(null, events[0], traced)];
 
     events.forEach((event, index) => {
       const classes = ["node"];
       if (event.id === cursor) classes.push("cursor");
       if (traced.has(event.id)) classes.push(`traced-${this.trace.direction}`);
       if (this.trace?.patientZero === event.id) classes.push("patient-zero");
+      if (event.id === this.highlightId) classes.push("just-moved");
 
       parts.push(`
-        <article class="${classes.join(" ")}" data-id="${event.id}" style="--c:${event.phase.color}">
-          <div class="ptr"><span>${event.id}</span><span class="sev ${event.severity}">${event.severity}</span></div>
+        <article class="${classes.join(" ")}" data-id="${event.id}" draggable="true" style="--c:${event.phase.color}">
+          <div class="ptr"><span><span class="grip">⠿</span>${event.id}</span><span class="sev ${event.severity}">${event.severity}</span></div>
           <div class="phase">${escapeHtml(event.phase.label)}</div>
           <div class="time">${formatTime(event.timestamp)}</div>
           <div class="summary">${escapeHtml(event.summary)}</div>
           <div class="host">⌁ ${escapeHtml(event.host)}</div>
+          ${event.out_of_order ? `<span class="ooo" title="previous_event happened later">⚠ out of chronological order</span>` : ""}
         </article>`);
 
-      const bothTraced = traced.has(event.id) && traced.has(events[index + 1]?.id);
-      if (index < events.length - 1) parts.push(this.link(bothTraced ? linkClass : ""));
+      parts.push(this.link(event, events[index + 1] || null, traced));
     });
 
-    parts.push(this.link(""), `<div class="null-ref">last_event → None</div>`);
+    parts.push(`<div class="null-ref">None</div>`);
     this.el.innerHTML = parts.join("");
+    this.highlightId = null;
 
     this.el.querySelectorAll(".node").forEach((node) =>
-      node.addEventListener("click", () => this.onSelect(node.dataset.id)));
+      node.addEventListener("click", () => this.handlers.onSelect(node.dataset.id)));
+
+    this.slideNodes(oldPositions);
+    this.previousLinks = new Set([...this.el.querySelectorAll(".link")].map((l) => l.dataset.key));
     this.el.querySelector(".node.cursor")
       ?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }
 
-  link(kind) {
-    return `<div class="link ${kind}"><span>next</span><span class="arrow">⇄</span><span>prev</span></div>`;
+  link(left, right, traced) {
+    const key = `${left ? left.id : "None"}>${right ? right.id : "None"}`;
+    const classes = ["link"];
+    if (this.previousLinks && !this.previousLinks.has(key)) classes.push("rewired");
+    if (left && right && traced.has(left.id) && traced.has(right.id)) classes.push(this.trace.direction);
+
+    // left.next_event must be right, and right.previous_event must be left
+    let arrows = "";
+    let label = [];
+    if (left) {
+      const ok = left.next_id === (right ? right.id : null);
+      arrows += `<path class="fwd ${ok ? "" : "broken"}" pathLength="1" d="M6 10 H50 M44 5 L51 10 L44 15"/>`;
+      label.push(right ? "next" : "next=None");
+    }
+    if (right) {
+      const ok = right.prev_id === (left ? left.id : null);
+      arrows += `<path class="bwd ${ok ? "" : "broken"}" pathLength="1" d="M50 22 H6 M12 17 L5 22 L12 27"/>`;
+      label.push(left ? "prev" : "prev=None");
+    }
+
+    return `
+      <div class="${classes.join(" ")}" data-key="${key}" data-before="${right ? right.id : ""}">
+        <svg viewBox="0 0 56 30" aria-hidden="true">${arrows}</svg>
+        <span class="lbl">${label.join(" · ")}</span>
+      </div>`;
+  }
+
+  nodePositions() {
+    const positions = {};
+    this.el.querySelectorAll(".node").forEach((node) => { positions[node.dataset.id] = node.offsetLeft; });
+    return positions;
+  }
+
+  slideNodes(oldPositions) {
+    const firstRender = this.previousLinks === null;
+    this.el.querySelectorAll(".node").forEach((node) => {
+      const oldLeft = oldPositions[node.dataset.id];
+      if (oldLeft === undefined) {
+        if (!firstRender) node.classList.add("entering");
+        return;
+      }
+      const delta = oldLeft - node.offsetLeft;
+      if (delta !== 0) {
+        node.animate(
+          [{ transform: `translateX(${delta}px)` }, { transform: "translateX(0)" }],
+          { duration: 500, easing: "cubic-bezier(.2,.8,.2,1)" },
+        );
+      }
+    });
+  }
+
+  bindDragAndDrop() {
+    this.el.addEventListener("dragstart", (e) => {
+      const node = e.target.closest(".node");
+      if (!node) return;
+      this.dragId = node.dataset.id;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", this.dragId);
+      this.el.classList.add("drag-active");
+      requestAnimationFrame(() => node.classList.add("dragging"));
+    });
+
+    this.el.addEventListener("dragover", (e) => {
+      if (!this.dragId) return;
+      e.preventDefault();
+      this.autoScroll(e.clientX);
+      this.showDropTarget(this.beforeIdAt(e.clientX));
+    });
+
+    this.el.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const id = this.dragId;
+      const beforeId = this.dropBeforeId;
+      this.endDrag();
+      if (id && beforeId !== undefined) {
+        this.highlightId = id;
+        this.handlers.onMove(id, beforeId);
+      }
+    });
+
+    this.el.addEventListener("dragend", () => this.endDrag());
+  }
+
+  // id of the node the dragged one should be inserted before (null = end)
+  beforeIdAt(x) {
+    for (const node of this.el.querySelectorAll(".node")) {
+      if (node.dataset.id === this.dragId) continue;
+      const rect = node.getBoundingClientRect();
+      if (x < rect.left + rect.width / 2) return node.dataset.id;
+    }
+    return null;
+  }
+
+  showDropTarget(beforeId) {
+    const dragged = this.events.find((e) => e.id === this.dragId);
+    const unchanged = dragged.next_id === beforeId;
+    this.dropBeforeId = unchanged ? undefined : beforeId;
+
+    this.el.querySelectorAll(".link.drop-target").forEach((l) => l.classList.remove("drop-target"));
+    if (unchanged) return;
+    this.el.querySelector(`.link[data-before="${beforeId === null ? "" : beforeId}"]`)
+      ?.classList.add("drop-target");
+  }
+
+  autoScroll(x) {
+    const rect = this.el.getBoundingClientRect();
+    if (x < rect.left + 70) this.el.scrollLeft -= 16;
+    else if (x > rect.right - 70) this.el.scrollLeft += 16;
+  }
+
+  endDrag() {
+    this.el.classList.remove("drag-active");
+    this.el.querySelectorAll(".dragging, .drop-target").forEach((n) => n.classList.remove("dragging", "drop-target"));
+    this.dragId = null;
+    this.dropBeforeId = undefined;
   }
 }
 
@@ -131,7 +265,7 @@ class DetailView {
   constructor(detailEl, traceEl, handlers) {
     this.el = detailEl;
     this.traceEl = traceEl;
-    this.handlers = handlers; // { onJump, onDelete }
+    this.handlers = handlers; // { onJump, onDelete, onMove }
   }
 
   render(snapshot) {
@@ -163,12 +297,20 @@ class DetailView {
         ${this.pointer("previous_event", event.prev_id)}
         ${this.pointer("next_event", event.next_id)}
       </div>
+      <div class="move-buttons">
+        <button class="btn" id="btn-move-earlier" ${event.prev_id ? "" : "disabled"}>◀ Move earlier</button>
+        <button class="btn" id="btn-move-later" ${event.next_id ? "" : "disabled"}>Move later ▶</button>
+      </div>
       <button class="btn danger" id="btn-delete">✕ Remove event from timeline</button>`;
 
     this.el.querySelectorAll(".pointer[data-id]").forEach((el) =>
       el.addEventListener("click", () => this.handlers.onJump(el.dataset.id)));
     this.el.querySelector("#btn-delete")
       .addEventListener("click", () => this.handlers.onDelete(event.id));
+    this.el.querySelector("#btn-move-earlier")
+      .addEventListener("click", () => this.handlers.onMove(event.id, "earlier"));
+    this.el.querySelector("#btn-move-later")
+      .addEventListener("click", () => this.handlers.onMove(event.id, "later"));
   }
 
   pointer(label, id) {
@@ -240,7 +382,10 @@ class App {
     this.api = new ApiClient();
     this.toast = new Toast(document.getElementById("toast"));
     this.stats = new StatsView(document.getElementById("stats"));
-    this.timeline = new TimelineView(document.getElementById("timeline"), (id) => this.run(() => this.api.jump(id)));
+    this.timeline = new TimelineView(document.getElementById("timeline"), {
+      onSelect: (id) => this.run(() => this.api.jump(id)),
+      onMove: (id, beforeId) => this.moveEvent(id, beforeId),
+    });
     this.traversal = new TraversalView(document.getElementById("traversal"));
     this.detail = new DetailView(
       document.getElementById("detail"),
@@ -248,6 +393,7 @@ class App {
       {
         onJump: (id) => this.run(() => this.api.jump(id)),
         onDelete: (id) => this.run(() => this.api.deleteEvent(id), `${id} removed from the chain`),
+        onMove: (id, direction) => this.moveOneStep(id, direction),
       },
     );
     this.form = new EvidenceForm(
@@ -269,6 +415,11 @@ class App {
 
     document.addEventListener("keydown", (e) => {
       if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        if (this.snapshot?.cursor) this.moveOneStep(this.snapshot.cursor, e.key === "ArrowLeft" ? "earlier" : "later");
+        return;
+      }
       const keys = { ArrowLeft: "prev", ArrowRight: "next", Home: "first", End: "last" };
       if (keys[e.key]) {
         e.preventDefault();
@@ -314,6 +465,24 @@ class App {
       this.toast.show(`${data.created.id} added with ${this.insertionMethod(data)}`);
     } catch (error) {
       this.handleError(error);
+    }
+  }
+
+  async moveEvent(id, beforeId) {
+    let how = `insert_event_before(${beforeId})`;
+    if (beforeId === null) how = "append_event";
+    else if (this.snapshot.events[0].id === beforeId) how += " → prepend_event";
+    this.timeline.highlightId = id;
+    await this.run(() => this.api.moveEvent(id, beforeId), `${id} relinked: remove_event → ${how}`);
+  }
+
+  moveOneStep(id, direction) {
+    const event = this.snapshot.events.find((e) => e.id === id);
+    if (direction === "earlier") {
+      if (event.prev_id) this.moveEvent(id, event.prev_id);
+    } else if (event.next_id) {
+      const next = this.snapshot.events.find((e) => e.id === event.next_id);
+      this.moveEvent(id, next.next_id);
     }
   }
 

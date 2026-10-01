@@ -28,8 +28,12 @@ class ForensicInvestigator:
         self.current = event
 
     def release(self, event: SecurityEvent) -> None:
-        if self.current is event:
-            self.current = event.next_event or event.previous_event
+        if self.current is not event:
+            return
+        if event.next_event is not None:
+            self.current = event.next_event
+        else:
+            self.current = event.previous_event
 
     def trace_to_patient_zero(self) -> dict:
         path = []

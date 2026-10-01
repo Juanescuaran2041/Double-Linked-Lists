@@ -70,6 +70,18 @@ class AttackTimeline:
         self.size -= 1
         return event
 
+    def move_event_before(self, event: SecurityEvent, reference: SecurityEvent) -> None:
+        if event is reference or event.next_event is reference:
+            return
+        self.remove_event(event)
+        self.insert_event_before(reference, event)
+
+    def move_event_to_end(self, event: SecurityEvent) -> None:
+        if event is self.last_event:
+            return
+        self.remove_event(event)
+        self.append_event(event)
+
     def clear(self) -> None:
         self.first_event = None
         self.last_event = None
