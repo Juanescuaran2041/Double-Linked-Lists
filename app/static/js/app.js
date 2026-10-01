@@ -58,6 +58,22 @@ class StatsView {
   }
 }
 
+class TraversalView {
+  constructor(element) { this.el = element; }
+
+  render(snapshot) {
+    if (snapshot.is_empty) {
+      this.el.innerHTML = `<div class="row"><span class="label">is_empty()</span><span class="chip">True</span></div>`;
+      return;
+    }
+    const forward = snapshot.events.map((e) => `<span class="chip">${e.id}</span>`).join("→");
+    const backward = snapshot.backward.map((id) => `<span class="chip">${id}</span>`).join("→");
+    this.el.innerHTML = `
+      <div class="row forward"><span class="label">for event in timeline (__iter__)</span>${forward}</div>
+      <div class="row backward"><span class="label">reversed(timeline) (__reversed__)</span>${backward}</div>`;
+  }
+}
+
 class TimelineView {
   constructor(element, onSelect) {
     this.el = element;
@@ -225,6 +241,7 @@ class App {
     this.toast = new Toast(document.getElementById("toast"));
     this.stats = new StatsView(document.getElementById("stats"));
     this.timeline = new TimelineView(document.getElementById("timeline"), (id) => this.run(() => this.api.jump(id)));
+    this.traversal = new TraversalView(document.getElementById("traversal"));
     this.detail = new DetailView(
       document.getElementById("detail"),
       document.getElementById("trace-result"),
@@ -294,10 +311,17 @@ class App {
       const data = await this.api.addEvent(payload);
       this.render(data.timeline);
       this.form.reset();
-      this.toast.show(`${data.created.id} inserted in chronological order`);
+      this.toast.show(`${data.created.id} added with ${this.insertionMethod(data)}`);
     } catch (error) {
       this.handleError(error);
     }
+  }
+
+  insertionMethod(data) {
+    const event = data.timeline.events.find((e) => e.id === data.created.id);
+    if (!event.next_id) return "append_event";
+    if (!event.prev_id) return "insert_event_before → prepend_event";
+    return `insert_event_before(${event.next_id})`;
   }
 
   render(snapshot) {
@@ -306,6 +330,7 @@ class App {
     document.getElementById("node-count").textContent = snapshot.size;
     this.stats.render(snapshot);
     this.timeline.render(snapshot);
+    this.traversal.render(snapshot);
     this.detail.render(snapshot);
     this.form.setTypes(snapshot.event_types);
   }

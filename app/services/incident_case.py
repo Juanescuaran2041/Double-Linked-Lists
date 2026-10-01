@@ -34,6 +34,10 @@ class IncidentCase:
             item["next_id"] = event.next_event.event_id if event.next_event else None
             events.append(item)
 
+        backward = []
+        for event in reversed(self.timeline):
+            backward.append(event.event_id)
+
         phases = []
         for phase in AttackPhase:
             phases.append({
@@ -49,6 +53,8 @@ class IncidentCase:
             "size": len(self.timeline),
             "cursor": current.event_id if current else None,
             "events": events,
+            "backward": backward,
+            "is_empty": self.timeline.is_empty(),
             "stats": self.timeline.phase_stats(),
             "phases": phases,
             "event_types": EventFactory.fields(),

@@ -33,7 +33,6 @@ app/
 ├── routes/               Flask blueprints (REST API + page)
 ├── templates/index.html  Frontend
 └── static/               CSS + JS
-tests/test_attack_timeline.py
 run.py
 ```
 
@@ -43,9 +42,31 @@ The case starts **empty**: all evidence is added by the analyst from the UI.
 
 ```bash
 pip install -r requirements.txt
-python -m unittest discover tests -v   # run the unit tests
-python run.py                          # http://127.0.0.1:5000
+python run.py        # http://127.0.0.1:5000
 ```
+
+## Testing every method from the UI
+
+| Method | How to trigger it |
+|--------|-------------------|
+| `add_event` | Submit the "Add new evidence" form |
+| `append_event` | Add an event newer than all the others (the toast says `append_event`) |
+| `insert_event_before` | Add an event with a time between two existing events |
+| `prepend_event` | Add an event older than all the others |
+| `remove_event` | "Remove event from timeline" button |
+| `clear` | "Clear timeline" button |
+| `find_event` | Click a node or a `previous_event` / `next_event` box |
+| `__iter__` | "for event in timeline" row under the timeline |
+| `__reversed__` | "reversed(timeline)" row under the timeline |
+| `__len__` / `is_empty` | Event counter in the top bar / empty timeline |
+| `phase_stats` | Counter cards per attack phase |
+| `go_to_first` / `go_to_last` | ⏮ / ⏭ buttons (Home / End keys) |
+| `step_forward` / `step_backward` | ▶ / ◀ buttons (→ / ← keys) |
+| `jump_to` | Click any node |
+| `release` | Remove the event that has the CURSOR: it moves to a neighbour |
+| `trace_to_patient_zero` | "Trace to patient zero" button |
+| `trace_impact` | "Trace impact" button |
+| `EventFactory.create` | Submit the form (leave a field empty to see the validation) |
 
 ## OOP principles applied
 
