@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attack Timeline Reconstructor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M8 12h2l1.5-3 2 6 1.5-3h1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>Attack Timeline Reconstructor</h1>
+        <p id="case-title" class="muted mono">Loading case…</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span class="pill mono"><span class="dot"></span>Doubly Linked List · <b id="node-count">0</b> events</span>
+      <button id="btn-clear" class="btn ghost">✕ Clear timeline</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="todo-banner" class="banner hidden">
+      <div class="banner-icon">⚙</div>
+      <div>
+        <h3>Your doubly linked list is not ready yet</h3>
+        <p>The backend raised <code id="todo-method">NotImplementedError</code>.
+           Open <code>app/models/attack_timeline.py</code>, implement the TODOs and
+           validate with <code>python -m unittest discover tests -v</code>.</p>
+      </div>
+      <button id="btn-retry" class="btn">Retry</button>
+    </section>
+
+    <section id="stats" class="stats"></section>
+
+    <section class="card timeline-card">
+      <div class="card-head">
+        <h2>Kill chain timeline</h2>
+        <div class="controls">
+          <button class="btn icon" data-move="first" title="Go to first_event (Home)">⏮</button>
+          <button class="btn icon" data-move="prev" title="Previous event (←)">◀</button>
+          <button class="btn icon" data-move="next" title="Next event (→)">▶</button>
+          <button class="btn icon" data-move="last" title="Go to last_event (End)">⏭</button>
+          <span class="sep"></span>
+          <button id="btn-trace-back" class="btn trace-back">⇠ Trace to patient zero</button>
+          <button id="btn-trace-forward" class="btn trace-forward">Trace impact ⇢</button>
+        </div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+      <p class="hint muted">Tip: use ← / → to move the cursor through <code>previous_event</code> / <code>next_event</code>.</p>
+    </section>
+
+    <div class="columns">
+      <section class="card">
+        <div class="card-head"><h2>Event under analysis</h2></div>
+        <div id="detail" class="detail"></div>
+        <div id="trace-result" class="trace-result hidden"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Add new evidence</h2></div>
+        <form id="evidence-form" class="form" autocomplete="off">
+          <label>Event type
+            <select name="type" id="event-type"></select>
+          </label>
+          <div class="row">
+            <label>Timestamp <input type="datetime-local" name="timestamp" step="60" required></label>
+            <label>Severity
+              <select name="severity">
+                <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+              </select>
+            </label>
+          </div>
+          <label>Host <input name="host" placeholder="WS-HR-03" required></label>
+          <label>Description <textarea name="description" rows="2" placeholder="What did the analyst observe?"></textarea></label>
+          <div id="dynamic-fields" class="row wrap"></div>
+          <button class="btn primary" type="submit">＋ Insert into timeline</button>
+          <p class="muted small">New evidence is placed in order with <code>AttackTimeline.add_event</code>.</p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
