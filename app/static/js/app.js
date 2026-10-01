@@ -1,17 +1,5 @@
 "use strict";
 
-/* ========================================================================
- * Attack Timeline Reconstructor - frontend
- * Small OOP layer: ApiClient + one View class per panel + App controller.
- * ===================================================================== */
-
-class NotImplementedYet extends Error {
-  constructor(method) {
-    super(method);
-    this.method = method;
-  }
-}
-
 const escapeHtml = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -24,7 +12,6 @@ const formatTime = (iso) => {
   });
 };
 
-/* ---------------------------------------------------------------------- */
 class ApiClient {
   async request(method, url, body) {
     const response = await fetch(url, {
@@ -33,7 +20,6 @@ class ApiClient {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await response.json().catch(() => ({}));
-    if (response.status === 501) throw new NotImplementedYet(data.method);
     if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
     return data;
   }
@@ -48,7 +34,6 @@ class ApiClient {
   clear() { return this.request("POST", "/api/clear"); }
 }
 
-/* ---------------------------------------------------------------------- */
 class Toast {
   constructor(element) { this.el = element; this.timer = null; }
 
@@ -60,7 +45,6 @@ class Toast {
   }
 }
 
-/* ---------------------------------------------------------------------- */
 class StatsView {
   constructor(element) { this.el = element; }
 
@@ -74,7 +58,6 @@ class StatsView {
   }
 }
 
-/* ---------------------------------------------------------------------- */
 class TimelineView {
   constructor(element, onSelect) {
     this.el = element;
@@ -128,7 +111,6 @@ class TimelineView {
   }
 }
 
-/* ---------------------------------------------------------------------- */
 class DetailView {
   constructor(detailEl, traceEl, handlers) {
     this.el = detailEl;
@@ -200,7 +182,6 @@ class DetailView {
   clearTrace() { this.traceEl.className = "trace-result hidden"; }
 }
 
-/* ---------------------------------------------------------------------- */
 class EvidenceForm {
   constructor(form, fieldsContainer, typeSelect, onSubmit) {
     this.form = form;
@@ -238,7 +219,6 @@ class EvidenceForm {
   }
 }
 
-/* ---------------------------------------------------------------------- */
 class App {
   constructor() {
     this.api = new ApiClient();
@@ -259,7 +239,6 @@ class App {
       document.getElementById("event-type"),
       (payload) => this.addEvidence(payload),
     );
-    this.banner = document.getElementById("todo-banner");
     this.bindControls();
   }
 
@@ -268,7 +247,6 @@ class App {
       btn.addEventListener("click", () => this.run(() => this.api.move(btn.dataset.move))));
     document.getElementById("btn-clear").addEventListener("click", () =>
       this.run(() => this.api.clear(), "Timeline cleared"));
-    document.getElementById("btn-retry").addEventListener("click", () => this.load());
     document.getElementById("btn-trace-back").addEventListener("click", () => this.trace("back"));
     document.getElementById("btn-trace-forward").addEventListener("click", () => this.trace("forward"));
 
@@ -324,7 +302,6 @@ class App {
 
   render(snapshot) {
     this.snapshot = snapshot;
-    this.banner.classList.add("hidden");
     document.getElementById("case-title").textContent = snapshot.title;
     document.getElementById("node-count").textContent = snapshot.size;
     this.stats.render(snapshot);
@@ -334,12 +311,6 @@ class App {
   }
 
   handleError(error) {
-    if (error instanceof NotImplementedYet) {
-      document.getElementById("todo-method").textContent = `NotImplementedError: ${error.method}`;
-      this.banner.classList.remove("hidden");
-      this.toast.show(`Pending TODO: ${error.method}`, "error");
-      return;
-    }
     this.toast.show(error.message, "error");
   }
 }

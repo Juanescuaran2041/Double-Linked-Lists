@@ -1,8 +1,3 @@
-"""Unit tests for YOUR AttackTimeline (doubly linked list) implementation.
-
-Run:  python -m unittest discover tests -v
-"""
-
 import unittest
 from datetime import datetime
 
@@ -20,7 +15,6 @@ class AttackTimelineTestCase(unittest.TestCase):
         self.timeline = AttackTimeline()
 
     def assertChain(self, expected: list) -> None:
-        """Checks the order in both directions AND every link."""
         self.assertEqual(len(self.timeline), len(expected))
         self.assertEqual(list(self.timeline), expected)
         self.assertEqual(list(reversed(self.timeline)), expected[::-1])

@@ -22,7 +22,7 @@ and `AttackTimeline` is the list (`first_event`, `last_event`, `size`).
 ```
 app/
 ├── models/
-│   ├── attack_timeline.py       AttackTimeline - the doubly linked list  <- YOUR WORK (TODO)
+│   ├── attack_timeline.py       AttackTimeline - the doubly linked list
 │   ├── security_event.py        SecurityEvent - abstract base, each event is a link
 │   ├── events.py                6 concrete events (inheritance/polymorphism)
 │   ├── enums.py                 AttackPhase (MITRE ATT&CK), Severity
@@ -43,12 +43,9 @@ The case starts **empty**: all evidence is added by the analyst from the UI.
 
 ```bash
 pip install -r requirements.txt
-python -m unittest discover tests -v   # validate your list
+python -m unittest discover tests -v   # run the unit tests
 python run.py                          # http://127.0.0.1:5000
 ```
-
-While a method is still a TODO, the page shows a banner telling you which
-`NotImplementedError` the backend raised.
 
 ## OOP principles applied
 

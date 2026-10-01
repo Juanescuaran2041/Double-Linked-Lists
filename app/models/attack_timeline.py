@@ -1,16 +1,12 @@
-
-from collections import Counter
-from typing import Dict, Iterator, Optional
-
 from app.models.security_event import SecurityEvent
 
 
 class AttackTimeline:
 
     def __init__(self) -> None:
-        self.first_event: Optional[SecurityEvent] = None
-        self.last_event: Optional[SecurityEvent] = None
-        self.size: int = 0
+        self.first_event: SecurityEvent | None = None
+        self.last_event: SecurityEvent | None = None
+        self.size = 0
 
     def __len__(self) -> int:
         return self.size
@@ -79,23 +75,27 @@ class AttackTimeline:
         self.last_event = None
         self.size = 0
 
-    def find_event(self, event_id: str) -> Optional[SecurityEvent]:
+    def find_event(self, event_id: str) -> SecurityEvent | None:
         for event in self:
             if event.event_id == event_id:
                 return event
         return None
 
-    def __iter__(self) -> Iterator[SecurityEvent]:
+    def __iter__(self):
         current_event = self.first_event
         while current_event is not None:
             yield current_event
             current_event = current_event.next_event
 
-    def __reversed__(self) -> Iterator[SecurityEvent]:
+    def __reversed__(self):
         current_event = self.last_event
         while current_event is not None:
             yield current_event
             current_event = current_event.previous_event
 
-    def phase_stats(self) -> Dict[str, int]:
-        return dict(Counter(event.phase().name for event in self))
+    def phase_stats(self) -> dict:
+        stats = {}
+        for event in self:
+            name = event.phase().name
+            stats[name] = stats.get(name, 0) + 1
+        return stats

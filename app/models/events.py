@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Any, Dict
 
 from app.models.enums import AttackPhase, Severity
 from app.models.security_event import SecurityEvent
+
 
 class ReconnaissanceEvent(SecurityEvent):
     def __init__(self, timestamp: datetime, host: str, description: str,
@@ -14,7 +14,7 @@ class ReconnaissanceEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.RECONNAISSANCE
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"source_ip": self._source_ip, "ports_scanned": self._ports_scanned}
 
     def summary(self) -> str:
@@ -31,7 +31,7 @@ class PhishingEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.INITIAL_ACCESS
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"sender": self._sender, "subject": self._subject}
 
     def summary(self) -> str:
@@ -48,7 +48,7 @@ class MalwareExecutionEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.EXECUTION
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"process": self._process, "sha256": self._sha256}
 
     def summary(self) -> str:
@@ -65,7 +65,7 @@ class PrivilegeEscalationEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.PRIVILEGE_ESCALATION
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"account": self._account, "technique": self._technique}
 
     def summary(self) -> str:
@@ -82,7 +82,7 @@ class LateralMovementEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.LATERAL_MOVEMENT
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"target_host": self._target_host, "protocol": self._protocol}
 
     def summary(self) -> str:
@@ -99,7 +99,7 @@ class ExfiltrationEvent(SecurityEvent):
     def phase(self) -> AttackPhase:
         return AttackPhase.EXFILTRATION
 
-    def indicators(self) -> Dict[str, Any]:
+    def indicators(self) -> dict:
         return {"destination": self._destination, "size_mb": self._size_mb}
 
     def summary(self) -> str:

@@ -1,5 +1,3 @@
-"""Forensic Attack Timeline Reconstructor - Flask application factory."""
-
 from flask import Flask
 
 from app.routes import api, views

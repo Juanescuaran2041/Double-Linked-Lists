@@ -13,7 +13,6 @@ from app.models.security_event import SecurityEvent
 
 
 class EventFactory:
-    # event type -> (class, specific fields asked in the UI form)
     TYPES = {
         "reconnaissance": (ReconnaissanceEvent, ["source_ip", "ports_scanned"]),
         "phishing": (PhishingEvent, ["sender", "subject"]),
@@ -23,24 +22,29 @@ class EventFactory:
         "exfiltration": (ExfiltrationEvent, ["destination", "size_mb"]),
     }
 
-    @classmethod
-    def fields(cls) -> dict:
-        return {name: fields for name, (_, fields) in cls.TYPES.items()}
+    @staticmethod
+    def fields() -> dict:
+        result = {}
+        for name in EventFactory.TYPES:
+            result[name] = EventFactory.TYPES[name][1]
+        return result
 
-    @classmethod
-    def create(cls, data: dict) -> SecurityEvent:
-        if data.get("type") not in cls.TYPES:
+    @staticmethod
+    def create(data: dict) -> SecurityEvent:
+        event_type = data.get("type")
+        if event_type not in EventFactory.TYPES:
             raise ValueError("Unknown event type")
-        event_class, fields = cls.TYPES[data["type"]]
 
-        missing = [f for f in ["timestamp", "host", *fields] if not data.get(f)]
-        if missing:
-            raise ValueError(f"Missing fields: {', '.join(missing)}")
+        event_class, fields = EventFactory.TYPES[event_type]
+        for field in ["timestamp", "host"] + fields:
+            if not data.get(field):
+                raise ValueError(f"Missing field: {field}")
 
+        extra_values = [data[field] for field in fields]
         return event_class(
             datetime.fromisoformat(data["timestamp"]),
             data["host"],
             data.get("description", ""),
             Severity[data.get("severity", "MEDIUM")],
-            *[data[f] for f in fields],
+            *extra_values,
         )
